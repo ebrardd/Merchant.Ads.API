@@ -1,6 +1,6 @@
-﻿namespace Merchant.Ads.API.Configs
+﻿using Merchant.Ads.API.Models;
+
+namespace Merchant.Ads.API.Configs
 {
-    public class ErrorHandlingSettings
-    {
-    }
+    
 }

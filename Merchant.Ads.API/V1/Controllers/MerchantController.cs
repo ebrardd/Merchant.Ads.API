@@ -11,6 +11,8 @@ using System;
 using System.Threading.Tasks;
 using Merchant.Ads.API.V1.Models.ResponseModels;
 using Merchant.Ads.API.V1.Models.RequestModels;
+using MongoDB.Bson.Serialization.IdGenerators;
+using Merchant.Ads.API.Validations;
 
 
 namespace Merchant.Ads.API.V1.Controllers
@@ -22,26 +24,46 @@ namespace Merchant.Ads.API.V1.Controllers
         private readonly IService _merchantService;
         private readonly ILogger<MerchantController> _logger;
 
-        public MerchantController(IService service, ILogger<MerchantController>logger)
+        public MerchantController(IService service, ILogger<MerchantController> logger)
         {
             _merchantService = service;
             _logger = logger;
-            
+
 
         }
+        /* [HttpPost]
+         public IActionResult Create([FromBody] MerchantCreateRequestModel merchant)//REQAL
+         {
+             _merchantService.Create(merchant);
+             return CreatedAtAction(nameof(Create), merchant);//aksiyonuolusturdun
+         }*/
         [HttpPost]
-        public IActionResult Create([FromBody] MerchantCreateRequestModel merchant)//REQAL
+        public async Task<IActionResult> CreateAsync([FromBody] MerchantCreateRequestModel merchant)
         {
-            _merchantService.Create(merchant);
-            return CreatedAtAction(nameof(Create), merchant);//aksiyonuolusturdun
+            await _merchantService.CreateAsync(merchant);
+            return CreatedAtAction(nameof(CreateAsync), merchant);
+
         }
+
+        /* [HttpGet("{Id}")]
+         public IActionResult GetById(int Id)
+         {
+             var merchant = _merchantService.GetById(Id);
+             return Ok(merchant);
+         }*/
         [HttpGet("{Id}")]
-        public IActionResult GetById(int Id)
+        public async Task<IActionResult> GetById(int id)
         {
-            var merchant = _merchantService.GetById(Id);
+            var merchant = await _merchantService.GetByIdAsync(id);
+
+            if (merchant == null)
+            {
+                return NotFound("Merchant not found.");
+            }
+
             return Ok(merchant);
         }
-        [HttpPost("PostAsync")]
+        [HttpPost("{PostAsync}")]
         public async Task<IActionResult> PostAsync([FromBody] MerchantModel merchantModel)
         {
             if (!ModelState.IsValid)
@@ -55,19 +77,20 @@ namespace Merchant.Ads.API.V1.Controllers
         }
 
         [HttpPut("{ID}")]
-        public async Task<ActionResult<MerchantModel>> Update(int id, MerchantModel merchantModel)
+
+        public async Task<ActionResult<MerchantModel>> UpdateAsync(int id, MerchantModel merchantModel)
         {
             try
             {
                 if (id != merchantModel.Id)
                     return BadRequest("MerchantModel Id mismatch");
 
-                var merchantModelToUpdate = await _merchantService.Get(id, merchantModel);
+                var merchantModelToUpdate = await _merchantService.GetAsync(id);
 
                 if (merchantModelToUpdate is null)
                     return NotFound($"MerchantModel with Id = {id} not found");
 
-                var updatedMerchantModel = await _merchantService.Update(id, merchantModelToUpdate);
+                var updatedMerchantModel = await _merchantService.UpdateAsync(id, merchantModel);
 
                 if (updatedMerchantModel != null)
                 {
@@ -79,49 +102,25 @@ namespace Merchant.Ads.API.V1.Controllers
                 }
             }
             catch (Exception)
+
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error updating data");
             }
-        
-        
-
-       /* [HttpPatch("{id}")]
-        async Task<IActionResult> PartiallyUpdateMerchantForCompany(int TaxNo, int id, [FromBody] JsonPatchDocument<MerchantModel> patchDoc)
-                                                                                        
+        }
+        [HttpPatch("{ID}")]
+        public async Task<ActionResult<MerchantModel>>PartiallyUpdate(int id, [FromBody] MerchantPatchRequestModel merchantPatchRequestModel)
         {
-            if (patchDoc == null)
+            var merchantModel = await _merchantService.PartiallyUpdate(id, merchantPatchRequestModel);
+            if (merchantModel == null)
             {
-                _logger.LogError("patchDoc object sent from client is null.");
-                return BadRequest("patchDoc object is null");
+                return NotFound("merchant not found");             
             }
+            return Ok($"Updated to merchant with ID:{merchantModel.Id}");
+        }
 
-            var company = await _merchantService.Company.Get(TaxNo, trackChanges: false);
-            if (company == null)
-            {
-                _logger.LogInformation($"Company with id: {TaxNo} doesn't exist in the database.");
-                return NotFound();
-            }
+    
 
-            var merchantModelEntity = await _merchantService.MerchantModel.Get(TaxNo, id, trackChanges: true);
-            if (merchantModelEntity == null)
-            {
-                _logger.LogInformation($"MerchantModel with id: {id} doesn't exist in the database.");
-                return NotFound();
-            }
-                var merchantModelToPatch = _mapper.Map<MerchantModel>(merchantModelEntity);
-
-                patchDoc.ApplyTo(merchantModelToPatch);
-
-                _mapper.Map(merchantModelToPatch, merchantModelEntity);
-
-                await _merchantService.Save();
-
-                return NoContent();
-            } */
-    }
-
-
-    [HttpDelete("{ID}")]
+        [HttpDelete("{ID}")]
             
             public async Task<ActionResult<MerchantModel>> Delete(int id,MerchantModel merchantModel)
             {

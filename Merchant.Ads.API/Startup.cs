@@ -9,6 +9,11 @@ using Merchant.Ads.API.Services;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
+using CsvHelper;
+using Microsoft.AspNetCore.Mvc.Formatters;
+using MongoDB.Bson.Serialization.Serializers;
+using NLog;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 
 
 namespace Merchant.Ads.API
@@ -23,6 +28,7 @@ namespace Merchant.Ads.API
         {
             Console.WriteLine($"Environment: {env.EnvironmentName}");
             var builder = new ConfigurationBuilder()
+           
             .SetBasePath(env.ContentRootPath)
             .AddJsonFile("Configs/appsettings.json")
             .AddJsonFile("Configs/appsettings.Development.json")
@@ -45,7 +51,8 @@ namespace Merchant.Ads.API
 
             services.AddCors(options => // Cross Origin Source
             {
-                options.AddPolicy("AllowAll", builder => {
+                options.AddPolicy("AllowAll", builder =>
+                {
                     builder
                 // .WithOrigins("*")
                 .AllowAnyMethod()
@@ -55,10 +62,18 @@ namespace Merchant.Ads.API
             });
 
 
+
             /*services.AddFluentValidationAutoValidation();
             services.AddFluentValidationClientsideAdapters();
             services.AddValidatorsFromAssemblyContaining<MerchantValidator>(); */
-            services.AddControllers();
+            services.AddControllers(config =>
+            {
+                config.RespectBrowserAcceptHeader = true;
+                config.ReturnHttpNotAcceptable = true;
+            }).AddXmlDataContractSerializerFormatters()
+            
+            .AddMvcOptions(options => options.OutputFormatters.Add(new CsvOutputFormatter()));
+                     
             services.AddHttpClient();
             services.AddMvc();
 
@@ -69,6 +84,7 @@ namespace Merchant.Ads.API
              options.ImplicitlyValidateRootCollectionElements = true;
              options.RegisterValidatorsFromAssembly(Assembly.GetExecutingAssembly());
          });*/
+            
 
             services.AddSingleton<ILoggerManager, LoggerManager>();
             services.AddEndpointsApiExplorer();
@@ -78,6 +94,7 @@ namespace Merchant.Ads.API
             services.AddSingleton<IService, Service>();
             services.AddSingleton<IMerchantRepository, MerchantRepository>();
             services.AddSingleton<MongoDBSettings>();
+            services.AddSingleton<ILoggerManager, LoggerManager>();
             services.Configure<MongoDBSettings>(Configuration.GetSection("MongoDBSettings"));
 
             //services.AddSingleton( _mongoDbSettings);
@@ -85,15 +102,22 @@ namespace Merchant.Ads.API
 
         }
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)//ILoggerManager,Logger
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env ,ILoggerManager logger)
         {
-            app.UseMiddleware<ExceptionMiddleWare>();
+           
+            LogManager.LoadConfiguration(string.Concat(Directory.GetCurrentDirectory(), "/Configs/nlog.config"));
+            if (env.IsProduction())
+            {
+                app.UseHsts();
+            }
             if (env.IsDevelopment())
             {
+                app.UseSwagger();
+                app.UseSwaggerUI();
                 app.UseDeveloperExceptionPage();
             }
-            //app.ConfigureExceptionHandler(logger);
-            // app.UseMiddleware<ExceptionMiddleWare>();
+             app.ConfigureExceptionHandler(logger);
+             app.UseMiddleware<ExceptionMiddleWare>();
 
             // app.UseHttpsRedirection();
 
@@ -102,8 +126,7 @@ namespace Merchant.Ads.API
             app.UseCors("AllowAll");
             app.UseResponseCompression();
             app.UseRouting();
-            app.UseSwagger();
-            app.UseSwaggerUI();
+            
             app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
             
 

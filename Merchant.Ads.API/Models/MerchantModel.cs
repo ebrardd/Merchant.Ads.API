@@ -9,7 +9,7 @@ namespace Merchant.Ads.API.Models
     {
         [BsonId]
         [BsonRepresentation(BsonType.Int32)]
-        public int ID { get; set; }
+        public int Id { get; set; }
         [Range(0,999)]
         public string FullName { get; set; }
         [Required(ErrorMessage = "Please enter a full name")]
