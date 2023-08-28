@@ -75,15 +75,15 @@ namespace Merchant.Ads.API
             .AddMvcOptions(options => options.OutputFormatters.Add(new CsvOutputFormatter()));
                      
             services.AddHttpClient();
-            services.AddMvc();
+            services.AddMvc()
 
 
-            /*    .AddFluentValidation(options =>
+               .AddFluentValidation(options =>
          {
              options.ImplicitlyValidateChildProperties = true;
              options.ImplicitlyValidateRootCollectionElements = true;
              options.RegisterValidatorsFromAssembly(Assembly.GetExecutingAssembly());
-         });*/
+         });
             
 
             services.AddSingleton<ILoggerManager, LoggerManager>();
